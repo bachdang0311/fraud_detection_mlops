@@ -156,16 +156,45 @@ az appservice plan create --name <YourAppServicePlanName> --resource-group <Your
 az webapp create --resource-group <YourResourceGroup> --plan <YourAppServicePlanName> --name <YourUniqueWebAppName> --deployment-container-image-name ""
 az webapp config appsettings set --resource-group <YourResourceGroup> --name <YourUniqueWebAppName> --settings WEBSITES_PORT=8080
 ```
-**9. Enable Application Insights:**
+
+**9. Create Azure Resource Group**
+```bash
+$RESOURCE_GROUP="MyFraudRgAppService"
+$LOCATION="westus2"
+az group create --name $RESOURCE_GROUP --location $LOCATION
+```
+**10. Create Azure Container Registry (ACR)**
+```bash
+$ACR_NAME="myfraudappacrhqbdz1" # Replace with your unique ACR name
+az acr create --resource-group $RESOURCE_GROUP --name $ACR_NAME --sku Basic --admin-enabled true
+```
+
+**11.  Create Azure App Service Plan**
+```bash
+$APPSERVICE_PLAN_NAME="myFraudAppPlanWestprsxnj" # Replace
+az appservice plan create --name $APPSERVICE_PLAN_NAME --resource-group $RESOURCE_GROUP --sku B1 --is-linux --location $LOCATION
+```
+
+**12. Create Web App for Containers (Azure App Service)**
+```bash
+$WEBAPP_NAME="myfrauddetectorapik0jegk" # Replace with your unique Web App name
+# CI/CD will set the actual image, so it can be created with a placeholder initially.
+az webapp create --resource-group $RESOURCE_GROUP `
+                 --plan $APPSERVICE_PLAN_NAME `
+                 --name $WEBAPP_NAME `
+                 --deployment-container-image-name "" # Or a placeholder
+```
+
+**13. Enable Application Insights for Monitoring:**
 * In Azure Portal: Navigate to your Web App -> "Application Insights" -> "Turn on Application Insights". Link or create a new resource.
 
 ### III. **CI/CD Setup with GitHub Actions (One-time Setup)**
 
-**10. Prepare Azure Credentials for GitHub Actions:**
+**14. Prepare Azure Credentials for GitHub Actions:**
 * **ACR Admin Credentials:** From ACR -> "Access keys" -> Enable Admin user -> Copy Login server, Username, Password.
 * **App Service Publish Profile:** From Web App -> "Get publish profile" -> Download `.PublishSettings` file -> Copy entire XML content.
 
-**11. Add Credentials to GitHub Secrets:**
+**15. Add Credentials to GitHub Secrets:**
 * In your GitHub repo: "Settings" -> "Secrets and variables" -> "Actions" -> "New repository secret".
 * Add:
     * `ACR_LOGIN_SERVER`
@@ -175,11 +204,11 @@ az webapp config appsettings set --resource-group <YourResourceGroup> --name <Yo
     * `AZURE_APP_NAME` (your Web App name)
     * `IMAGE_NAME` (e.g., `fraud_detector_app`)
 
-**12. Create GitHub Actions Workflow File:**
+**16. Create GitHub Actions Workflow File:**
 * Create `.github/workflows/deploy-to-azure-app-service.yml`.
 * Paste the previously discussed YAML content (using ACR Admin User & Publish Profile).
 
-**13. Commit & Push Project to GitHub:**
+**17. Commit & Push Project to GitHub:**
 * Ensure all necessary files are present (Dockerfile, `src/`, `models/`, `artifacts/`, workflow file, etc.).
 * Commit any uncommitted changes (especially model files if following "commit artifacts to Git" approach and the new workflow file).
     ```bash
@@ -190,12 +219,12 @@ az webapp config appsettings set --resource-group <YourResourceGroup> --name <Yo
 
 ### IV. **Automated Deployment via CI/CD (Ongoing)**
 
-**14. Develop & Push Changes:**
+**18. Develop & Push Changes:**
 * Make code modifications or re-run `python run_pipeline.py` to update `models/`artifacts.
 * Commit all relevant changes (including new model/artifact files) to Git.
 * `git push origin main`
 
-**15. Monitor CI/CD & Verify Deployment:**
+**19. Monitor CI/CD & Verify Deployment:**
 * The GitHub Actions workflow will automatically build, push to ACR, and deploy to Azure App Service. Monitor this in your GitHub repo's "Actions" tab.
 * After successful deployment, test your Web App URL and API endpoints.
 * Check Azure Application Insights for logs and performance.
