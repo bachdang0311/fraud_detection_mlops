@@ -97,7 +97,8 @@ The system implements the following key functionalities:
 ## 4. Installation, Setup, and Deployment Workflow
 This section provides a concise guide to set up the project, run the training pipeline, and deploy the application to Azure App Service with CI/CD. Python 3.11 is required.
 
-***Local Development & Training***
+### I. Local Development & Training
+
 ****1. Clone Repository & Setup Environment:****
 git clone https://github.com/bachdang0311/fraud_detection_mlops.git && cd fraud_detection_mlops
 Create and activate a Python virtual environment (e.g., python -m venv venv, then activate).
@@ -124,13 +125,13 @@ Test http://localhost:8080/api/predict with Postman or curl.
 docker build -t fraud_detector_app_local:latest .
 (Optional) Test with docker run -p 8080:8080 -e PORT=8080 fraud_detector_app_local:latest
 
-***II. Azure Resource Provisioning (One-time Manual Setup)***
+### II. Azure Resource Provisioning (One-time Manual Setup)
 (Ensure Azure CLI is installed & logged in: az login, az account set ...)
 
 ****7.Register Azure Providers (If needed):****
-
 az provider register --namespace Microsoft.Web --wait
 az provider register --namespace Microsoft.ContainerRegistry --wait
+
 Create Azure Resources (if they don't exist, use your actual names and region like westus2):
 
 Resource Group (e.g., MyFraudRgAppService): az group create --name <YourResourceGroup> --location <YourLocation>
