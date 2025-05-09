@@ -1,20 +1,138 @@
-fraud_ml_ops_project/
+# MLOps Project: Real-time Fraud Detection System
+
+## 1. Project Architecture
+
+**(Your architecture diagram image will go here)**
+
+---
+
+## 2. Introduction
+
+### 2.1. Project Goal
+The primary objective of this MLOps project is to design, develop, and deploy an end-to-end machine learning system capable of detecting fraudulent financial transactions in real-time. This encompasses the entire machine learning lifecycle, including automated data preprocessing, robust feature engineering, model training, comprehensive experiment tracking, and the deployment of the trained model as a scalable, containerized web service with Continuous Integration and Continuous Deployment (CI/CD) pipelines.
+
+### 2.2. Technologies Used
+This project leverages a modern stack of MLOps tools and technologies:
+* **Programming Language:** Python 3.11
+* **Core Data Science Libraries:** Pandas, NumPy, Scikit-learn, LightGBM
+* **Visualization:** Matplotlib, Seaborn
+* **Model & Preprocessor Persistence:** Joblib
+* **Experiment Tracking (Local):** MLflow
+* **Web Framework & API:** Flask
+* **Containerization:** Docker
+* **Cloud Platform:** Microsoft Azure
+    * **Azure App Service for Containers:** Hosting the containerized Flask API.
+    * **Azure Container Registry (ACR):** Storing Docker images.
+    * **Azure Application Insights:** Application performance monitoring and logging.
+* **CI/CD:** GitHub Actions
+* **Version Control:** Git & GitHub
+
+### 2.3. Main Functionalities
+The system implements the following key functionalities:
+1.  **Automated Training Pipeline (`run_pipeline.py`):**
+    * Loads and merges raw transaction and identity data.
+    * Performs data preprocessing, including datetime feature extraction, M-feature mapping, string cleaning, and label encoding for categorical features.
+    * Conducts extensive feature engineering, such as UID creation, D-normalized features, C-column aggregations, V-column PCA, and M-flag aggregates.
+    * Trains a LightGBM model for fraud classification.
+    * Logs training parameters, evaluation metrics (AUC, LogLoss, F1-score, Precision, Recall), and various artifacts (trained model, preprocessors, feature lists, evaluation plots) locally using MLflow.
+    * Saves the trained model, preprocessors, and other essential artifacts for deployment.
+2.  **Real-time Fraud Prediction API (`src/predict.py` with Flask):**
+    * Exposes a RESTful API endpoint (`/api/predict`) that accepts transaction details in JSON format.
+    * Applies the same preprocessing and feature engineering transformations to the input data as used during training, ensuring consistency.
+    * Loads the persisted LightGBM model and associated preprocessors.
+    * Returns a JSON response containing the fraud probability and a binary fraud/not-fraud prediction.
+    * Optionally, serves a simple HTML web interface via the `/` route for manual data entry and prediction.
+3.  **Containerized Deployment on Azure App Service:**
+    * The Flask API, along with all its dependencies, model, and preprocessors, is containerized using Docker.
+    * The resulting Docker image is stored in Azure Container Registry (ACR).
+    * The application is deployed and hosted on Azure App Service for Containers, providing a scalable and managed environment for the API.
+4.  **CI/CD with GitHub Actions:**
+    * An automated workflow is triggered upon pushing code changes to the `main` branch of the GitHub repository.
+    * The workflow automatically builds a new Docker image.
+    * The new Docker image is automatically pushed to ACR.
+    * The Azure App Service is automatically updated to use the latest image from ACR, ensuring continuous deployment.
+5.  **Monitoring and Logging:**
+    * Integration with Azure Application Insights for real-time monitoring of the deployed application's performance, availability, error rates, and for querying application logs (including custom traces from the Python code).
+    * Local MLflow UI for reviewing, comparing, and analyzing past training experiments.
+
+---
+
+## 3. Project Structure
+.
+├── .github/
+│   └── workflows/
+│       └── deploy-to-azure-app-service.yml  # CI/CD workflow for Azure App Service
+├── artifacts/
+│   ├── confusion_matrix_valid.png
+│   ├── feature_importance.png
+│   ├── final_training_features.json
+│   └── model_info.json
 ├── data/
-│   ├── raw/                     # Nơi chứa file CSV gốc (train_transaction.csv, ...)
-│   └── processed/               # Nơi chứa dữ liệu đã qua tiền xử lý
+│   ├── raw/                     # Stores raw input CSV files (e.g., train_transaction.csv) - Not committed to Git
+│   └── processed/               # Stores processed data (e.g., final_processed_training_data.parquet) - Not committed to Git
+├── env/
+│   └── environment_scoring.yml  # Conda environment for (previous) Azure ML scoring
+├── mlruns/                      # Local MLflow experiment tracking data - Not committed to Git
+├── models/
+│   ├── label_encoders.joblib
+│   ├── lgbm_model.joblib
+│   ├── pca_v_transformer.joblib
+│   └── scaler_v_transformer.joblib
 ├── notebooks/
-│   └── fraud_ml_ops.ipynb       # Notebook gốc của bạn (để tham khảo)
+│   └── fraud_ml_ops.ipynb       # Jupyter notebook for exploration and initial modeling
 ├── src/
-│   ├── __init__.py
-│   ├── config.py                # Chứa các cấu hình (đường dẫn, tham số model)
-│   ├── data_preprocessing.py    # Chứa các hàm tiền xử lý dữ liệu
-│   ├── feature_engineering.py   # Chứa các hàm tạo đặc trưng
-│   ├── train.py                 # Chứa hàm huấn luyện và đánh giá model
-│   ├── predict.py               # (Tùy chọn) Chứa hàm dự đoán với model đã huấn luyện
-│   └── utils.py                 # Chứa các hàm tiện ích (ví dụ: reduce_memory_usage)
-├── models/                      # Nơi lưu trữ các model đã huấn luyện (ví dụ: lgbm_model.pkl)
-├── artifacts/                   # Nơi lưu các thông tin khác (ví dụ: model_info.json, feature_importance.png)
-├── tests/                       # Chứa các unit test (nếu có)
-├── requirements.txt             # Danh sách các thư viện cần thiết
-├── Dockerfile                   # (Tùy chọn) Để đóng gói ứng dụng
-└── README.md
+│   ├── init.py
+│   ├── config.py                # Project configurations (paths, parameters)
+│   ├── data_preprocessing.py    # Data loading and preprocessing scripts
+│   ├── feature_engineering.py   # Feature generation scripts
+│   ├── predict.py               # Flask application for serving predictions
+│   ├── train.py                 # Model training and evaluation script
+│   └── utils.py                 # Utility functions
+├── templates/                   # HTML templates for the Flask web interface
+│   └── index.html
+├── tests/                       # Placeholder for unit and integration tests
+├── .dockerignore                # Specifies files to ignore during Docker build
+├── .gitignore                   # Specifies files to be ignored by Git
+├── config.json                  # Azure ML workspace configuration (Should be in .gitignore)
+├── create_aml_scoring_env.py    # (Legacy) Script for Azure ML scoring environment
+├── deploy_to_aml_endpoint.py    # (Legacy) Script for deploying to Azure ML endpoint
+├── Dockerfile                   # Instructions to build the Docker image
+├── README.md                    # This documentation file
+├── register_aml_deployment_package.py # (Legacy) Script for Azure ML deployment package
+├── requirements.txt             # Python package dependencies
+└── run_pipeline.py              # Main script to orchestrate the training pipeline
+*(Based on the image `image_f033a1.png` and your project files)*
+
+**Folder and File Descriptions:**
+
+* **`.github/workflows/`**: Contains the GitHub Actions workflow YAML file (`deploy-to-azure-app-service.yml`) that defines the CI/CD pipeline for building the Docker image, pushing it to ACR, and deploying it to Azure App Service.
+* **`artifacts/`**: Stores non-model outputs generated by the training pipeline. This includes:
+    * `confusion_matrix_valid.png`: Visualization of the model's performance on the validation set.
+    * `feature_importance.png`: Plot showing the most important features for the model.
+    * `final_training_features.json`: A JSON file listing the exact features used to train the model, crucial for ensuring consistency during inference.
+    * `model_info.json`: A JSON file containing metadata about the trained model, such as MLflow run ID, training parameters, and key performance metrics.
+* **`data/raw/`**: Designated directory for storing the original, unaltered input datasets (e.g., `train_transaction.csv`, `train_identity.csv`). These files are typically large and are not committed to the Git repository.
+* **`data/processed/`**: Intended for storing dataframes after preprocessing and feature engineering steps, ready for model training (e.g., `final_processed_training_data.parquet`). Also generally not committed to Git.
+* **`env/`**: Contains environment configuration files. `environment_scoring.yml` was likely used for defining a Conda environment for a previous Azure Machine Learning deployment approach.
+* **`mlruns/`**: The default local directory where MLflow stores all experiment tracking data, including parameters, metrics, tags, and artifacts for each run. This directory is excluded from Git.
+* **`models/`**: This critical directory stores the serialized trained machine learning model (`lgbm_model.joblib`) and any preprocessor objects (`label_encoders.joblib`, `pca_v_transformer.joblib`, `scaler_v_transformer.joblib`) that were fitted during the training pipeline and are necessary for transforming new data at inference time.
+* **`notebooks/`**: Contains Jupyter notebooks (`fraud_ml_ops.ipynb`) used for initial data exploration, analysis, experimentation, and iterative model development.
+* **`src/`**: The primary directory containing all Python source code for the project.
+    * `__init__.py`: Marks the `src` directory as a Python package.
+    * `config.py`: Defines global configuration variables, file paths, model hyperparameters, and other settings used throughout the project.
+    * `data_preprocessing.py`: Houses functions responsible for loading raw data, cleaning it, handling missing values, and performing initial transformations like datetime processing and categorical encoding.
+    * `feature_engineering.py`: Contains scripts for generating new, informative features from the preprocessed data to improve model performance.
+    * `predict.py`: Implements the Flask web application. It loads the trained model and preprocessors, defines API endpoints (like `/api/predict`) for receiving input data, processes the input, makes predictions, and returns the results. It also serves the HTML interface.
+    * `train.py`: Includes the core logic for training the LightGBM model, performing model evaluation on validation/test sets, and logging all relevant experiment details to MLflow locally.
+    * `utils.py`: A collection of utility functions that support various tasks across the project, such as memory optimization.
+* **`templates/`**: Contains HTML files (e.g., `index.html`) used by the Flask application to render a web-based user interface for making predictions.
+* **`tests/`**: (To be developed) This directory will contain all unit tests and integration tests to ensure the correctness and reliability of the codebase.
+* **Root Directory Files:**
+    * `.dockerignore`: Specifies which files and directories should be excluded from the Docker build context to keep the image lean.
+    * `.gitignore`: Lists files and directories that Git should ignore (e.g., virtual environments, local data, MLflow runs, sensitive configuration files).
+    * `config.json`: Contains configuration details for connecting to an Azure Machine Learning workspace. *This file should be in `.gitignore` if it holds sensitive subscription or workspace IDs to avoid committing them to a public repository.*
+    * `create_aml_scoring_env.py`, `deploy_to_aml_endpoint.py`, `register_aml_deployment_package.py`: These Python scripts were part of the initial MLOps strategy focused on deploying the model using Azure Machine Learning managed online endpoints. They handle the creation of scoring environments, registration of deployment packages, and deployment to AML endpoints. (Mention if these are now considered legacy or an alternative deployment path for specific scenarios).
+    * `Dockerfile`: Contains the set of instructions for Docker to build the application image. It specifies the base Python image, copies necessary files (source code, models, artifacts, requirements), installs dependencies, and defines the command to run the Flask application.
+    * `README.md`: This file, providing a comprehensive overview of the project.
+    * `requirements.txt`: Lists all Python libraries and their versions required to run the project, ensuring a reproducible environment.
+    * `run_pipeline.py`: The main executable script that orchestrates the entire local training pipeline. It calls functions from `data_preprocessing.py`, `feature_engineering.py`, and `train.py` in sequence to process data and train the model.
