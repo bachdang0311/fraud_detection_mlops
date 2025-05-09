@@ -95,186 +95,81 @@ The system implements the following key functionalities:
     * `run_pipeline.py`: The main executable script that orchestrates the entire local training pipeline. It calls functions from `data_preprocessing.py`, `feature_engineering.py`, and `train.py` in sequence to process data and train the model.
  
 ## 4. Installation, Setup, and Deployment Workflow
+This section provides a concise guide to set up the project, run the training pipeline, and deploy the application to Azure App Service with CI/CD. Python 3.11 is required.
 
-I. Local Development Environment Setup
+***Local Development & Training***
+****1. Clone Repository & Setup Environment:****
+git clone https://github.com/bachdang0311/fraud_detection_mlops.git && cd fraud_detection_mlops
+Create and activate a Python virtual environment (e.g., python -m venv venv, then activate).
+Install dependencies: pip install -r requirements.txt (ensure opencensus-ext-azure is included).
+****2.Prepare Data:****
+Download train_transaction.csv and train_identity.csv.
+Place them in the data/raw/ directory.
 
-These steps are for setting up the project on a local machine for development, training, and local testing.
+****3. Run Training Pipeline:****
+Execute: python run_pipeline.py
+This generates:
+Model and preprocessor files in models/.
+Artifacts (feature lists, info, plots) in artifacts/.
+MLflow experiment logs in mlruns/.
 
-Step 1: Clone the Repository
+****4.Review Experiments (Optional):****
+Run mlflow ui and navigate to http://localhost:5000.
 
-git clone https://github.com/bachdang0311/fraud_detection_mlops.git
-cd fraud_detection_mlops
+****5.Test API Locally (Optional):****
+Run python -m src.predict.
+Test http://localhost:8080/api/predict with Postman or curl.
 
-Step 2: Create and Activate Python Virtual Environment
-
-# Ensure Python 3.11 is installed
-python -m venv venv
-# On Windows:
-venv\Scripts\activate
-# On macOS/Linux:
-source venv/bin/activate
-
-Step 3: Install Python Dependencies
-
-pip install -r requirements.txt
-
-Step 4: Obtain and Place Raw Data
-
-Download train_transaction.csv and train_identity.csv from the IEEE-CIS Fraud Detection Kaggle competition.
-
-Create the directory data/raw/ if it doesn't exist.
-
-Place the downloaded CSV files into the data/raw/ directory. (Raw data is not committed to Git.)
-
-Step 5: Run Local Training Pipeline
-
-python run_pipeline.py
-
-This will:
-
-Save fitted preprocessors and the trained model to models/
-
-Save other artifacts to artifacts/
-
-Log experiment details to the mlruns/ directory
-
-Step 6: Review Training Experiments with MLflow UI (Local)
-
-mlflow ui
-
-Open http://localhost:5000 to inspect training runs.
-
-Step 7: Test Flask Prediction API Locally
-
-python -m src.predict
-
-Flask app will be available at http://localhost:8080. Test the /api/predict endpoint using Postman or curl.
-
-Step 8: (Optional) Build and Test Docker Image Locally
-
-# Build
+****6.Build Docker Image Locally (Recommended before first cloud push):****
 docker build -t fraud_detector_app_local:latest .
-# Run
-docker run -p 8080:8080 -e PORT=8080 fraud_detector_app_local:latest
+(Optional) Test with docker run -p 8080:8080 -e PORT=8080 fraud_detector_app_local:latest
 
-Test the API at http://localhost:8080/api/predict
+***II. Azure Resource Provisioning (One-time Manual Setup)***
+(Ensure Azure CLI is installed & logged in: az login, az account set ...)
 
-II. Azure Cloud Resource Setup (Manual One-time Setup)
-
-Ensure you have Azure CLI installed and are logged in:
-
-az login
-az account set --subscription "<your-subscription-id>"
-
-Step 9: Register Azure Resource Providers
+****7.Register Azure Providers (If needed):****
 
 az provider register --namespace Microsoft.Web --wait
-az provider register --namespace Microsoft.Storage --wait
 az provider register --namespace Microsoft.ContainerRegistry --wait
+Create Azure Resources (if they don't exist, use your actual names and region like westus2):
 
-Step 10: Create Azure Resource Group
+Resource Group (e.g., MyFraudRgAppService): az group create --name <YourResourceGroup> --location <YourLocation>
+Container Registry (ACR) (e.g., myfraudappacrhqbdz1): az acr create --resource-group <YourResourceGroup> --name <YourUniqueACRName> --sku Basic --admin-enabled true
+App Service Plan (e.g., myFraudAppPlanWestprsxnj, SKU B1, Linux): az appservice plan create --name <YourAppServicePlanName> --resource-group <YourResourceGroup> --sku B1 --is-linux --location <YourLocation>
+Web App for Containers (e.g., myfrauddetectorapik0jegk): az webapp create --resource-group <YourResourceGroup> --plan <YourAppServicePlanName> --name <YourUniqueWebAppName> --deployment-container-image-name "" az webapp config appsettings set --resource-group <YourResourceGroup> --name <YourUniqueWebAppName> --settings WEBSITES_PORT=8080
+Enable Application Insights:
 
-$NEW_RESOURCE_GROUP = "MyFraudRgAppServiceCI"
-$LOCATION = "westus2"
-az group create --name $NEW_RESOURCE_GROUP --location $LOCATION
+In Azure Portal: Navigate to your Web App -> "Application Insights" -> "Turn on Application Insights". Link or create a new resource.
+III. CI/CD Setup with GitHub Actions (One-time Setup)
+Prepare Azure Credentials for GitHub Actions:
 
-Step 11: Create Azure Container Registry (ACR)
+ACR Admin Credentials: From ACR -> "Access keys" -> Enable Admin user -> Copy Login server, Username, Password.
+App Service Publish Profile: From Web App -> "Get publish profile" -> Download .PublishSettings file -> Copy entire XML content.
+Add Credentials to GitHub Secrets:
 
-$NEW_ACR_NAME_CI = "myfraudappcicracr" + (Get-Random -Count 4 | ForEach-Object { [char]$_ }).ToLower()
-az acr create --resource-group $NEW_RESOURCE_GROUP --name $NEW_ACR_NAME_CI --sku Basic --admin-enabled true
+In your GitHub repo: "Settings" -> "Secrets and variables" -> "Actions" -> "New repository secret".
+Add: ACR_LOGIN_SERVER, ACR_USERNAME, ACR_PASSWORD, AZURE_WEBAPP_PUBLISH_PROFILE, AZURE_APP_NAME (your Web App name), IMAGE_NAME (e.g., fraud_detector_app).
+Create GitHub Actions Workflow File:
 
-Step 12: Create Azure App Service Plan
+Create .github/workflows/deploy-to-azure-app-service.yml.
+Paste the previously discussed YAML content (using ACR Admin User & Publish Profile).
+Commit & Push Project to GitHub:
 
-$NEW_APPSERVICE_PLAN_CI = "myFraudAppPlanCI" + (Get-Random -Count 4 | ForEach-Object { [char]$_ }).ToLower()
-az appservice plan create --name $NEW_APPSERVICE_PLAN_CI --resource-group $NEW_RESOURCE_GROUP --sku B1 --is-linux --location $LOCATION
-
-Step 13: Create Azure App Service (Web App for Containers)
-
-$NEW_WEBAPP_NAME_CI = "myfrauddetectorapici" + (Get-Random -Count 4 | ForEach-Object { [char]$_ }).ToLower()
-az webapp create --resource-group $NEW_RESOURCE_GROUP `
-                 --plan $NEW_APPSERVICE_PLAN_CI `
-                 --name $NEW_WEBAPP_NAME_CI `
-                 --deployment-container-image-name ""
-
-az webapp config appsettings set --resource-group $NEW_RESOURCE_GROUP --name $NEW_WEBAPP_NAME_CI --settings WEBSITES_PORT=8080
-az webapp log config --name $NEW_WEBAPP_NAME_CI --resource-group $NEW_RESOURCE_GROUP --docker-container-logging filesystem --level information
-
-Step 14: Enable Application Insights
-
-Go to Azure Portal → App Service → Monitoring → Application Insights
-
-Click "Turn on" and create or link an existing resource.
-
-Ensure opencensus-ext-azure is in requirements.txt
-
-Configure logging in src/predict.py
-
-III. CI/CD Setup with GitHub Actions
-
-Step 15: Prepare Azure Credentials
-
-ACR Admin Credentials: Azure Portal → ACR → Access keys → Enable Admin
-
-App Service Publish Profile: Azure Portal → App Service → Overview → Get publish profile
-
-Step 16: Add GitHub Secrets
-
-Go to GitHub → Settings → Secrets → Actions. Add:
-
-ACR_LOGIN_SERVER
-
-ACR_USERNAME
-
-ACR_PASSWORD
-
-AZURE_WEBAPP_PUBLISH_PROFILE
-
-AZURE_APP_NAME
-
-IMAGE_NAME
-
-Step 17: Create GitHub Actions Workflow File
-
-Create .github/workflows/deploy-to-azure-app-service.yml
-
-Paste your YAML configuration
-
-Ensure environment variables map to GitHub secrets
-
-Step 18: Commit and Push Project to GitHub
-
-git init -b main
-git config --global user.email "your_email@example.com"
-git config --global user.name "Your Name"
-git add .
-git commit -m "Initial project commit with CI/CD workflow"
-git remote add origin https://github.com/<YOUR_USERNAME>/<YOUR_REPOSITORY_NAME>.git
-git push -u origin main
-
-For existing repos, only add and push the new workflow file.
-
-IV. Ongoing Development and Automated Deployment
-
-Step 19: Make Code Changes or Retrain Model
-
-python run_pipeline.py
-
-Update files in models/, artifacts/, or src/ as needed.
-
-Step 20: Push Changes to GitHub
+Ensure all necessary files are present (Dockerfile, src/, models/, artifacts/, workflow file, etc.).
+Commit any uncommitted changes (especially model files if following "commit artifacts to Git" approach and the new workflow file).
+Bash
 
 git add .
-git commit -m "Describe your changes"
+git commit -m "Configure CI/CD with GitHub Actions"
 git push origin main
+IV. Automated Deployment via CI/CD (Ongoing)
+Develop & Push Changes:
 
-Step 21: Monitor GitHub Actions Workflow
+Make code modifications or re-run python run_pipeline.py to update models/artifacts.
+Commit all relevant changes (including new model/artifact files) to Git.
+git push origin main
+Monitor CI/CD & Verify Deployment:
 
-Go to GitHub → Actions tab → Track workflow status.
-
-Step 22: Verify Deployment
-
-Check http://.azurewebsites.net
-
-Review logs via Application Insights
-
-This setup provides a robust MLOps pipeline, from local development and model training to full cloud deployment and monitoring via CI/CD automation
+The GitHub Actions workflow will automatically build, push to ACR, and deploy to Azure App Service. Monitor this in your GitHub repo's "Actions" tab.
+After successful deployment, test your Web App URL and API endpoints.
+Check Azure Application Insights for logs and performance.
