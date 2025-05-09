@@ -58,50 +58,7 @@ The system implements the following key functionalities:
 ---
 
 ## 3. Project Structure
-.
-├── .github/
-│   └── workflows/
-│       └── deploy-to-azure-app-service.yml  # CI/CD workflow for Azure App Service
-├── artifacts/
-│   ├── confusion_matrix_valid.png
-│   ├── feature_importance.png
-│   ├── final_training_features.json
-│   └── model_info.json
-├── data/
-│   ├── raw/                     # Stores raw input CSV files (e.g., train_transaction.csv) - Not committed to Git
-│   └── processed/               # Stores processed data (e.g., final_processed_training_data.parquet) - Not committed to Git
-├── env/
-│   └── environment_scoring.yml  # Conda environment for (previous) Azure ML scoring
-├── mlruns/                      # Local MLflow experiment tracking data - Not committed to Git
-├── models/
-│   ├── label_encoders.joblib
-│   ├── lgbm_model.joblib
-│   ├── pca_v_transformer.joblib
-│   └── scaler_v_transformer.joblib
-├── notebooks/
-│   └── fraud_ml_ops.ipynb       # Jupyter notebook for exploration and initial modeling
-├── src/
-│   ├── init.py
-│   ├── config.py                # Project configurations (paths, parameters)
-│   ├── data_preprocessing.py    # Data loading and preprocessing scripts
-│   ├── feature_engineering.py   # Feature generation scripts
-│   ├── predict.py               # Flask application for serving predictions
-│   ├── train.py                 # Model training and evaluation script
-│   └── utils.py                 # Utility functions
-├── templates/                   # HTML templates for the Flask web interface
-│   └── index.html
-├── tests/                       # Placeholder for unit and integration tests
-├── .dockerignore                # Specifies files to ignore during Docker build
-├── .gitignore                   # Specifies files to be ignored by Git
-├── config.json                  # Azure ML workspace configuration (Should be in .gitignore)
-├── create_aml_scoring_env.py    # (Legacy) Script for Azure ML scoring environment
-├── deploy_to_aml_endpoint.py    # (Legacy) Script for deploying to Azure ML endpoint
-├── Dockerfile                   # Instructions to build the Docker image
-├── README.md                    # This documentation file
-├── register_aml_deployment_package.py # (Legacy) Script for Azure ML deployment package
-├── requirements.txt             # Python package dependencies
-└── run_pipeline.py              # Main script to orchestrate the training pipeline
-*(Based on the image `image_f033a1.png` and your project files)*
+<img width="1202" alt="Screenshot 2025-05-09 175741" src="https://github.com/user-attachments/assets/6739cda6-5cee-4b1d-a267-d8fc91fc5bf6" />
 
 **Folder and File Descriptions:**
 
